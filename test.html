@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Integrado</title>
+    <style>
+        .chat-container {
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            z-index: 1;
+        }
+        .chat-header {
+            background-color: #1976D2;
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        .chat-content {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+            max-height: 400px;
+        }
+        .chat-input {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+        }
+        .chat-input textarea {
+            flex-grow: 1;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .chat-input button {
+            background-color: #1976D2;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background-color: #135ba2;
+        }
+        .chat-message {
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .chat-message.show {
+            opacity: 1;
+        }
+        .user-message {
+            text-align: right;
+            color: #1976D2;
+            background-color: #E3F2FD;
+        }
+        .bot-message {
+            text-align: left;
+            color: #444;
+            background-color: #F1F1F1;
+        }
+        .chat-footer {
+            background-color: #1976D2;
+            color: white;
+            padding: 5px;
+            text-align: right;
+            font-size: 12px;
+        }
+        .toggle-chat {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #1976D2;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 24px;
+            z-index: 2;
+        }
+        
+    </style>
+    <script>
+      function loadConversation(user_id, conversation_id) {
+    fetch(`askmyweb.com/api/user/${user_id}/conversation/${conversation_id}/message`, {
+        method: 'GET',
+    })
+    .then(response => response.json())
+    .then(data => {
+        var chatContent = document.querySelector('.chat-content');
+        chatContent.innerHTML = '';  // Clear the chat
+
+        // Iterate over the messages and add them to the chat
+        data.messages.forEach(function(message) {
+            var messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', 'show');  // Add 'show' class here
+            // Assuming user messages start with "User: "
+            if (message.startsWith('User: ')) {
+                messageElement.classList.add('user-message');
+                message = message.substring(6);  // Remove "User: "
+            } else {
+                messageElement.classList.add('bot-message');
+                message = message.substring(16);  // Remove "Agent response: "
+            }
+            messageElement.innerHTML = '<p>' + message + '</p>';
+            chatContent.appendChild(messageElement);
+        });
+    });
+}
+
+
+        function simulateTyping(element, message, index = 0) {
+            if (index < message.length) {
+                element.innerHTML += message.charAt(index);
+                setTimeout(function() {
+                    simulateTyping(element, message, index + 1);
+                }, 70);  // Cambia este valor para ajustar la velocidad de "escritura"
+            }
+        }
+
+        window.onload = function() {
+            var user_id = "1"; 
+            var conv_id = "2";
+            loadConversation(user_id, conv_id);  // Load the previous conversation
+
+    document.querySelector('.chat-input button').addEventListener('click', function() {
+        var text = document.querySelector('.chat-input textarea').value;
+        var message = { message: text };
+
+        // Create and show the user's message
+        var userMessageElement = document.createElement('div');
+        userMessageElement.classList.add('chat-message');
+        userMessageElement.classList.add('user-message');
+        userMessageElement.innerHTML = '<p><strong>Tú:</strong></p><p>' + text + '</p>';
+        document.querySelector('.chat-content').appendChild(userMessageElement);
+        setTimeout(function() {
+            userMessageElement.classList.add('show');
+        }, 1);
+
+        fetch(`http://askmyweb.com/api/user/${user_id}/conversation/${conv_id}/message`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(message),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Create and show the bot's message
+            var botMessageElement = document.createElement('div');
+            botMessageElement.classList.add('chat-message');
+            botMessageElement.classList.add('bot-message');
+            botMessageElement.innerHTML = '<p><strong>Bot:</strong></p><p></p>';
+            document.querySelector('.chat-content').appendChild(botMessageElement);
+            setTimeout(function() {
+                botMessageElement.classList.add('show');
+            }, 100);
+
+            // Simulate typing
+            simulateTyping(botMessageElement.querySelector('p:nth-child(2)'), data.agent_response);
+
+            document.querySelector('.chat-input textarea').value = '';
+            
+            // Scroll to the bottom
+            var chatContent = document.querySelector('.chat-content');
+            chatContent.scrollTop = chatContent.scrollHeight;
+        });
+    });
+
+    var toggleChatButton = document.querySelector('.toggle-chat');
+    toggleChatButton.addEventListener('click', function() {
+        var chatContainer = document.querySelector('.chat-container');
+        if (chatContainer.style.display === 'none') {
+            chatContainer.style.display = 'flex';
+            toggleChatButton.innerHTML = '&#x2715;';  // Change to cross icon
+        } else {
+            chatContainer.style.display = 'none';
+            toggleChatButton.innerHTML = '&#x1F4AC;';  // Change to chat icon
+        }
+    });
+};
+
+    </script>
+</head>
+<body>
+    <div class="chat-container" style="display: none;">
+        <div class="chat-header">
+            <h2>Agente Virtual</h2>
+        </div>
+        <div class="chat-content" id="chat-content">
+            <!-- Los mensajes de chat se añadirán aquí -->
+        </div>
+        <div class="chat-input">
+            <textarea placeholder="Escribe un mensaje..." id="chat-input"></textarea>
+            <button>Enviar</button>
+        </div>
+        <div class="chat-footer">
+            <p>powered by Askmyweb</p>
+        </div>
+    </div>
+    <div class="toggle-chat">
+        <i>&#x1F4AC;</i>
+    </div>
+</body>
+</html>
